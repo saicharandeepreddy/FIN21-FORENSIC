@@ -1,20 +1,39 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://ai.google.dev/static/site-assets/images/share-ais-513315318.png" />
-</div>
+# FIN21 — Expense Forensics
 
-# Run and deploy your AI Studio app
+Autonomous expense audit & Maker-Checker approval engine built at **Finathon 2026** (Aczen Technologies).
 
-This contains everything you need to run your app locally.
+## What it does
 
-View your app in AI Studio: https://ai.studio/apps/eccc3f39-27ce-4229-9129-116cc4a8222a
+- Upload a receipt → extracts vendor, amount, category, date, GSTIN
+- **Six forensic checks** run on every claim:
+  1. Employee verification (live Nova API)
+  2. Vendor verification (live Nova API)
+  3. Dynamic policy limit lookup (live Nova API — per employee grade)
+  4. Historical duplicate detection (live Nova API — ±3 day window)
+  5. GSTIN Mod-36 checksum validation (local)
+  6. EXIF metadata forensics (local — catches Photoshop/Canva edits)
+- Approval workflow: **Employee → Manager → Finance → Reimbursement**
+- Complete audit trail on every claim
 
-## Run Locally
+## Stack
 
-**Prerequisites:**  Node.js
+| Layer | Technology |
+|---|---|
+| Frontend | React 18 + Vite + TypeScript + Tailwind CSS |
+| Backend | Python 3.13 + FastAPI + SQLAlchemy |
+| Database | SQLite (dev) → PostgreSQL-ready |
+| External API | Aczen Nova (read-only, live) |
+| Deploy | Railway (backend) + Vercel (frontend) |
 
+## Local Run
 
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+### Backend
+
+```bash
+cd fin21-engine/backend
+python -m venv venv
+venv\Scripts\activate          # Windows
+# source venv/bin/activate     # Mac/Linux
+pip install -r requirements.txt
+# add NOVA_API_KEY to .env (see .env.example)
+uvicorn main:app --reload
