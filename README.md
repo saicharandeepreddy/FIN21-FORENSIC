@@ -1,3 +1,8 @@
+cd "D:\prototype fin21"
+notepad README.md
+Delete everything, paste this, save:
+
+markdown
 # FIN21 — Expense Forensics
 
 Autonomous expense audit & Maker-Checker approval engine built at **Finathon 2026** (Aczen Technologies).
@@ -37,3 +42,45 @@ venv\Scripts\activate          # Windows
 pip install -r requirements.txt
 # add NOVA_API_KEY to .env (see .env.example)
 uvicorn main:app --reload
+Runs on http://localhost:8000. API docs at /docs.
+
+Frontend
+bash
+npm install
+npm run dev
+Runs on http://localhost:3000.
+
+Demo Credentials
+Email	Password	Role
+ravi@tulasisupplies.example	demo1234	Employee
+karthik@tulasisupplies.example	demo1234	Manager
+arjun@tulasisupplies.example	demo1234	Finance
+chaitanya@tulasisupplies.example	demo1234	Admin
+Nova API Integration
+4 live calls per claim submission:
+
+GET /employees — verify employee + fetch grade
+
+GET /vendors — verify vendor in master data
+
+GET /spend-policies — dynamic limit for category + employee grade
+
+GET /expense-claims — duplicate detection within ±3 days
+
+What's Real vs. Fixture
+Real: Nova API calls, GSTIN checksum, EXIF forensics, SHA-256 hashing, approval workflow, audit trail.
+
+Fixture: OCR (filename-driven for demo determinism — PaddleOCR-ready pipeline) and login credentials (production would use JWT).
+
+Team
+Finathon 2026 · Aczen Technologies
+
+Built by SAI CHARAN DEEP REDDY.
+
+text
+
+Then:
+```bash
+git add README.md
+git commit -m "custom README"
+git push
