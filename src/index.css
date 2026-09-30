@@ -1,0 +1,86 @@
+@import url("https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap");
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --bg-cream: #EDE8DF;
+    --text-ink: #0F0F0F;
+    --accent-red: #C8352B;
+    --muted-gray: #8A8378;
+    --paper-white: #F5F1E8;
+    --status-success: #6B7B3E;
+    --status-warning: #D97706;
+    --status-danger: #C8352B;
+    --status-neutral: #8A8378;
+  }
+
+  * {
+    border-color: #0F0F0F;
+    box-sizing: border-box;
+  }
+
+  body {
+    margin: 0;
+    padding: 0;
+    background-color: #EDE8DF;
+    color: #0F0F0F;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    font-size: 15px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+  }
+
+  ::selection {
+    background-color: #C8352B;
+    color: #EDE8DF;
+  }
+
+  /* Custom thin scrollbar */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: #EDE8DF;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: #0F0F0F;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: #C8352B;
+  }
+}
+
+.font-anton {
+  font-family: 'Anton', sans-serif;
+  letter-spacing: -0.02em;
+  line-height: 0.85;
+  text-transform: uppercase;
+}
+
+.font-mono {
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.small-caps {
+  font-family: 'Inter', sans-serif;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.25em;
+  font-size: 11px;
+}
+
+.label-caps {
+  font-family: 'Inter', sans-serif;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.25em;
+  font-size: 12px;
+}
+
+/* Sharp focus ring */
+input:focus, textarea:focus, select:focus, button:focus-visible {
+  outline: 2px solid #C8352B;
+  outline-offset: 2px;
+}

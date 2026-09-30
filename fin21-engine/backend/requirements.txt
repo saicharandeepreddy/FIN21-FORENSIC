@@ -1,0 +1,9 @@
+fastapi
+uvicorn
+sqlalchemy
+pydantic
+python-multipart
+pillow
+piexif
+httpx
+python-dotenv

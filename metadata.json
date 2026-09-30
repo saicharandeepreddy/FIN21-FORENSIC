@@ -1,0 +1,6 @@
+{
+  "name": "FIN21 Engine",
+  "description": "Autonomous Financial Expense Audit and Nova Policy Compliance Engine",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
