@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Actor, Claim, ToastNotification, ReviewPayload, ReimbursePayload } from './lib/types';
-import { getStoredUser, setStoredUser, clearStoredUser, ACTORS } from './lib/auth';
+import { getStoredUser, setStoredUser, clearStoredUser } from './lib/auth';
 import {
   fetchClaims,
   uploadClaim,
@@ -11,6 +11,7 @@ import {
 } from './lib/api';
 
 import { LoginPage } from './components/LoginPage';
+import { Sidebar } from './components/Sidebar';
 import { TopBar } from './components/TopBar';
 import { HamburgerMenu } from './components/HamburgerMenu';
 import { ClaimDrawer } from './components/ClaimDrawer';
@@ -93,7 +94,6 @@ export default function App() {
   useEffect(() => {
     if (currentUser) {
       refreshClaims(currentUser);
-      // set initial view based on role
       if (currentUser.role === 'employee') setCurrentView('my_claims');
       else if (currentUser.role === 'manager') setCurrentView('pending');
       else if (currentUser.role === 'finance') setCurrentView('ready_to_reimburse');
@@ -243,46 +243,30 @@ export default function App() {
     }
   };
 
-  // If not logged in, show Credentials Login Page
+  // Login gate
   if (!currentUser) {
     return <LoginPage onSuccess={handleSelectActor} />;
   }
 
-  // Determine current page title
   const getPageTitle = (): string => {
     switch (currentView) {
-      case 'submit':
-        return 'SUBMIT EXPENSE';
-      case 'my_claims':
-        return 'MY CLAIMS';
-      case 'rejected':
-        return 'REJECTED & FLAGGED';
-      case 'appeals':
-        return 'APPEALS LEDGER';
-      case 'pending':
-        return 'PENDING REVIEW';
-      case 'team_claims':
-        return 'TEAM CLAIMS';
-      case 'all_claims':
-        return 'ALL CLAIMS REGISTER';
-      case 'manager_approved':
-        return 'MANAGER APPROVED';
-      case 'ready_to_reimburse':
-        return 'READY TO PAY';
-      case 'reimbursed':
-        return 'REIMBURSED ARCHIVE';
-      case 'dashboard':
-        return 'AUDIT METRICS';
-      case 'privacy':
-        return 'PRIVACY POLICY';
-      case 'terms':
-        return 'TERMS OF SERVICE';
-      default:
-        return 'WORKSPACE';
+      case 'submit': return 'SUBMIT EXPENSE';
+      case 'my_claims': return 'MY CLAIMS';
+      case 'rejected': return 'REJECTED & FLAGGED';
+      case 'appeals': return 'APPEALS LEDGER';
+      case 'pending': return 'PENDING REVIEW';
+      case 'team_claims': return 'TEAM CLAIMS';
+      case 'all_claims': return 'ALL CLAIMS REGISTER';
+      case 'manager_approved': return 'MANAGER APPROVED';
+      case 'ready_to_reimburse': return 'READY TO PAY';
+      case 'reimbursed': return 'REIMBURSED ARCHIVE';
+      case 'dashboard': return 'AUDIT METRICS';
+      case 'privacy': return 'PRIVACY POLICY';
+      case 'terms': return 'TERMS OF SERVICE';
+      default: return 'WORKSPACE';
     }
   };
 
-  // Render view content
   const renderContent = () => {
     if (currentView === 'privacy') {
       return <Privacy onBack={() => setCurrentView('dashboard')} />;
@@ -298,58 +282,17 @@ export default function App() {
     if (currentUser.role === 'employee') {
       switch (currentView) {
         case 'submit':
-          return (
-            <SubmitView
-              user={currentUser}
-              onSubmit={handleUploadSubmit}
-              isSubmitting={isSubmitting}
-            />
-          );
+          return <SubmitView user={currentUser} onSubmit={handleUploadSubmit} isSubmitting={isSubmitting} />;
         case 'my_claims':
-          return (
-            <MyClaimsView
-              user={currentUser}
-              claims={claims}
-              onSelectClaim={setSelectedClaim}
-              onOpenSubmit={() => setCurrentView('submit')}
-            />
-          );
+          return <MyClaimsView user={currentUser} claims={claims} onSelectClaim={setSelectedClaim} onOpenSubmit={() => setCurrentView('submit')} />;
         case 'rejected':
-          return (
-            <RejectedView
-              user={currentUser}
-              claims={claims}
-              onSelectClaim={setSelectedClaim}
-              onOpenAppeal={handleOpenAppealModal}
-            />
-          );
+          return <RejectedView user={currentUser} claims={claims} onSelectClaim={setSelectedClaim} onOpenAppeal={handleOpenAppealModal} />;
         case 'appeals':
-          return (
-            <AppealsView
-              user={currentUser}
-              claims={claims}
-              onSelectClaim={setSelectedClaim}
-              onOpenAppeal={handleOpenAppealModal}
-            />
-          );
+          return <AppealsView user={currentUser} claims={claims} onSelectClaim={setSelectedClaim} onOpenAppeal={handleOpenAppealModal} />;
         case 'dashboard':
-          return (
-            <EmployeeDashboardView
-              user={currentUser}
-              claims={claims}
-              onSelectClaim={setSelectedClaim}
-              onOpenSubmit={() => setCurrentView('submit')}
-            />
-          );
+          return <EmployeeDashboardView user={currentUser} claims={claims} onSelectClaim={setSelectedClaim} onOpenSubmit={() => setCurrentView('submit')} />;
         default:
-          return (
-            <MyClaimsView
-              user={currentUser}
-              claims={claims}
-              onSelectClaim={setSelectedClaim}
-              onOpenSubmit={() => setCurrentView('submit')}
-            />
-          );
+          return <MyClaimsView user={currentUser} claims={claims} onSelectClaim={setSelectedClaim} onOpenSubmit={() => setCurrentView('submit')} />;
       }
     }
 
@@ -357,52 +300,15 @@ export default function App() {
     if (currentUser.role === 'manager') {
       switch (currentView) {
         case 'pending':
-          return (
-            <ManagerPendingView
-              user={currentUser}
-              claims={claims}
-              onSelectClaim={setSelectedClaim}
-              onApprove={handleManagerApprove}
-              onReject={(c) => handleOpenRejectModal(c, 'manager')}
-            />
-          );
+          return <ManagerPendingView user={currentUser} claims={claims} onSelectClaim={setSelectedClaim} onApprove={handleManagerApprove} onReject={(c) => handleOpenRejectModal(c, 'manager')} />;
         case 'team_claims':
-          return (
-            <TeamClaimsView
-              user={currentUser}
-              claims={claims}
-              onSelectClaim={setSelectedClaim}
-              onApprove={handleManagerApprove}
-              onReject={(c) => handleOpenRejectModal(c, 'manager')}
-            />
-          );
+          return <TeamClaimsView user={currentUser} claims={claims} onSelectClaim={setSelectedClaim} onApprove={handleManagerApprove} onReject={(c) => handleOpenRejectModal(c, 'manager')} />;
         case 'rejected':
-          return (
-            <ManagerRejectedView
-              user={currentUser}
-              claims={claims}
-              onSelectClaim={setSelectedClaim}
-            />
-          );
+          return <ManagerRejectedView user={currentUser} claims={claims} onSelectClaim={setSelectedClaim} />;
         case 'dashboard':
-          return (
-            <ManagerDashboardView
-              user={currentUser}
-              claims={claims}
-              onSelectClaim={setSelectedClaim}
-              onNavigatePending={() => setCurrentView('pending')}
-            />
-          );
+          return <ManagerDashboardView user={currentUser} claims={claims} onSelectClaim={setSelectedClaim} onNavigatePending={() => setCurrentView('pending')} />;
         default:
-          return (
-            <ManagerPendingView
-              user={currentUser}
-              claims={claims}
-              onSelectClaim={setSelectedClaim}
-              onApprove={handleManagerApprove}
-              onReject={(c) => handleOpenRejectModal(c, 'manager')}
-            />
-          );
+          return <ManagerPendingView user={currentUser} claims={claims} onSelectClaim={setSelectedClaim} onApprove={handleManagerApprove} onReject={(c) => handleOpenRejectModal(c, 'manager')} />;
       }
     }
 
@@ -410,50 +316,15 @@ export default function App() {
     if (currentUser.role === 'finance') {
       switch (currentView) {
         case 'manager_approved':
-          return (
-            <FinanceManagerApprovedView
-              user={currentUser}
-              claims={claims}
-              onSelectClaim={setSelectedClaim}
-              onApprove={handleFinanceApprove}
-              onReject={(c) => handleOpenRejectModal(c, 'finance')}
-            />
-          );
+          return <FinanceManagerApprovedView user={currentUser} claims={claims} onSelectClaim={setSelectedClaim} onApprove={handleFinanceApprove} onReject={(c) => handleOpenRejectModal(c, 'finance')} />;
         case 'ready_to_reimburse':
-          return (
-            <FinanceReadyToReimburseView
-              user={currentUser}
-              claims={claims}
-              onSelectClaim={setSelectedClaim}
-              onOpenReimburse={handleOpenReimburseModal}
-            />
-          );
+          return <FinanceReadyToReimburseView user={currentUser} claims={claims} onSelectClaim={setSelectedClaim} onOpenReimburse={handleOpenReimburseModal} />;
         case 'reimbursed':
-          return (
-            <FinanceReimbursedView
-              user={currentUser}
-              claims={claims}
-              onSelectClaim={setSelectedClaim}
-            />
-          );
+          return <FinanceReimbursedView user={currentUser} claims={claims} onSelectClaim={setSelectedClaim} />;
         case 'dashboard':
-          return (
-            <FinanceDashboardView
-              user={currentUser}
-              claims={claims}
-              onSelectClaim={setSelectedClaim}
-              onNavigateReady={() => setCurrentView('ready_to_reimburse')}
-            />
-          );
+          return <FinanceDashboardView user={currentUser} claims={claims} onSelectClaim={setSelectedClaim} onNavigateReady={() => setCurrentView('ready_to_reimburse')} />;
         default:
-          return (
-            <FinanceReadyToReimburseView
-              user={currentUser}
-              claims={claims}
-              onSelectClaim={setSelectedClaim}
-              onOpenReimburse={handleOpenReimburseModal}
-            />
-          );
+          return <FinanceReadyToReimburseView user={currentUser} claims={claims} onSelectClaim={setSelectedClaim} onOpenReimburse={handleOpenReimburseModal} />;
       }
     }
 
@@ -461,59 +332,17 @@ export default function App() {
     if (currentUser.role === 'admin') {
       switch (currentView) {
         case 'all_claims':
-          return (
-            <MyClaimsView
-              user={currentUser}
-              claims={claims}
-              onSelectClaim={setSelectedClaim}
-              onOpenSubmit={() => setCurrentView('submit')}
-            />
-          );
+          return <MyClaimsView user={currentUser} claims={claims} onSelectClaim={setSelectedClaim} onOpenSubmit={() => setCurrentView('submit')} />;
         case 'submit':
-          return (
-            <SubmitView
-              user={currentUser}
-              onSubmit={handleUploadSubmit}
-              isSubmitting={isSubmitting}
-            />
-          );
+          return <SubmitView user={currentUser} onSubmit={handleUploadSubmit} isSubmitting={isSubmitting} />;
         case 'pending':
-          return (
-            <ManagerPendingView
-              user={currentUser}
-              claims={claims}
-              onSelectClaim={setSelectedClaim}
-              onApprove={handleManagerApprove}
-              onReject={(c) => handleOpenRejectModal(c, 'manager')}
-            />
-          );
+          return <ManagerPendingView user={currentUser} claims={claims} onSelectClaim={setSelectedClaim} onApprove={handleManagerApprove} onReject={(c) => handleOpenRejectModal(c, 'manager')} />;
         case 'ready_to_reimburse':
-          return (
-            <FinanceReadyToReimburseView
-              user={currentUser}
-              claims={claims}
-              onSelectClaim={setSelectedClaim}
-              onOpenReimburse={handleOpenReimburseModal}
-            />
-          );
+          return <FinanceReadyToReimburseView user={currentUser} claims={claims} onSelectClaim={setSelectedClaim} onOpenReimburse={handleOpenReimburseModal} />;
         case 'dashboard':
-          return (
-            <ManagerDashboardView
-              user={currentUser}
-              claims={claims}
-              onSelectClaim={setSelectedClaim}
-              onNavigatePending={() => setCurrentView('pending')}
-            />
-          );
+          return <ManagerDashboardView user={currentUser} claims={claims} onSelectClaim={setSelectedClaim} onNavigatePending={() => setCurrentView('pending')} />;
         default:
-          return (
-            <MyClaimsView
-              user={currentUser}
-              claims={claims}
-              onSelectClaim={setSelectedClaim}
-              onOpenSubmit={() => setCurrentView('submit')}
-            />
-          );
+          return <MyClaimsView user={currentUser} claims={claims} onSelectClaim={setSelectedClaim} onOpenSubmit={() => setCurrentView('submit')} />;
       }
     }
 
@@ -521,31 +350,45 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-[#EDE8DF] text-[#0F0F0F] flex flex-col justify-between selection:bg-[#C8352B] selection:text-[#EDE8DF]">
-      {/* Workspace Top Bar */}
-      <TopBar
+    <div className="min-h-screen bg-[#EDE8DF] text-[#0F0F0F] flex selection:bg-[#C8352B] selection:text-[#EDE8DF]">
+      {/* Persistent Sidebar — hidden on mobile, visible ≥768px */}
+      <Sidebar
         user={currentUser}
-        pageTitle={getPageTitle()}
-        onOpenMenu={() => setIsMenuOpen(true)}
-        onNavigateHome={() => setCurrentView('dashboard')}
-      />
-
-      {/* Full-Screen Dark Overlay Hamburger Menu */}
-      <HamburgerMenu
-        isOpen={isMenuOpen}
-        onClose={() => setIsMenuOpen(false)}
-        user={currentUser}
-        currentView={currentView}
-        onSelectView={setCurrentView}
+        activeView={currentView}
+        onNavigate={setCurrentView}
         onSignOut={handleSignOut}
       />
 
-      {/* Main Workspace Content Area */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-8 py-8 sm:py-12">
-        {renderContent()}
-      </main>
+      {/* Main content column */}
+      <div className="flex-1 min-w-0 flex flex-col justify-between">
+        <TopBar
+          user={currentUser}
+          pageTitle={getPageTitle()}
+          onOpenMenu={() => setIsMenuOpen(true)}
+          onNavigateHome={() => setCurrentView('dashboard')}
+        />
 
-      {/* Claim Detail Drawer (slides in from right in dark overlay aesthetic) */}
+        <HamburgerMenu
+          isOpen={isMenuOpen}
+          onClose={() => setIsMenuOpen(false)}
+          user={currentUser}
+          currentView={currentView}
+          onSelectView={setCurrentView}
+          onSignOut={handleSignOut}
+        />
+
+        <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-8 py-8 sm:py-12">
+          {renderContent()}
+        </main>
+
+        <Footer
+          onOpenPrivacy={() => setCurrentView('privacy')}
+          onOpenTerms={() => setCurrentView('terms')}
+          onNavigateHome={() => setCurrentView('dashboard')}
+        />
+      </div>
+
+      {/* Overlays — fixed position, do not affect flex layout */}
       <ClaimDrawer
         claim={selectedClaim}
         onClose={() => setSelectedClaim(null)}
@@ -557,7 +400,6 @@ export default function App() {
         onFinanceApprove={handleFinanceApprove}
       />
 
-      {/* Rejection Review Modal */}
       <ReviewModal
         claim={reviewModalClaim}
         isOpen={isReviewOpen}
@@ -566,7 +408,6 @@ export default function App() {
         stage={reviewStage}
       />
 
-      {/* Reimbursement Execution Modal */}
       <ReimburseModal
         claim={reimburseClaim}
         isOpen={isReimburseOpen}
@@ -574,7 +415,6 @@ export default function App() {
         onConfirm={handleConfirmReimburse}
       />
 
-      {/* Appeal Submission Modal */}
       <AppealModal
         claim={appealClaim}
         isOpen={isAppealOpen}
@@ -582,18 +422,8 @@ export default function App() {
         onSubmitAppeal={handleConfirmAppeal}
       />
 
-      {/* Toast Notifications */}
       <ToastContainer toasts={toasts} onDismiss={dismissToast} />
-
-      {/* Cookie Banner */}
       <CookieBanner />
-
-      {/* Working Editorial Footer with All 32 Launch Checklist requirements */}
-      <Footer
-        onOpenPrivacy={() => setCurrentView('privacy')}
-        onOpenTerms={() => setCurrentView('terms')}
-        onNavigateHome={() => setCurrentView('dashboard')}
-      />
     </div>
   );
 }

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Eye, EyeOff, AlertTriangle } from 'lucide-react';
-import { authenticate, CREDENTIALS } from '../lib/credentials';
+import { CREDENTIALS } from '../lib/credentials';
 import { Actor } from '../lib/types';
 
 interface LoginPageProps {
@@ -43,41 +43,53 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSuccess }) => {
     setIsVerifying(true);
     setErrorMsg(null);
 
-    // Brief delay for the editorial VERIFYING... state
-    await new Promise((r) => setTimeout(r, 450));
+    try {
+      const API = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+      const res = await fetch(`${API}/api/v1/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: email.trim().toLowerCase(),
+          password,
+        }),
+      });
 
-    const match = authenticate(email, password);
+      if (!res.ok) {
+        setIsVerifying(false);
+        triggerError('INVALID CREDENTIALS — Check your email and password.');
+        return;
+      }
 
-    if (!match) {
-      setIsVerifying(false);
-      triggerError('INVALID CREDENTIALS — Check your email and password.');
-      return;
-    }
+      const data = await res.json();
 
-    const sessionActor: Actor = {
-      apiKey: match.apiKey,
-      role: match.role,
-      actorId: match.actorId,
-      name: match.name,
-      title: match.title || `${match.role.toUpperCase()} User`,
-      avatarInitials:
-        match.avatarInitials ||
-        match.name
+      // Store the JWT in the apiKey field — the api.ts client sends it as Bearer token
+      const sessionActor: Actor = {
+        apiKey: data.access_token,
+        role: data.role,
+        actorId: data.actor_id,
+        name: data.name,
+        title: `${data.role.toUpperCase()} User`,
+        avatarInitials: data.name
           .split(' ')
-          .map((n) => n[0])
+          .map((n: string) => n[0])
           .join('')
           .toUpperCase(),
-      email: match.email,
-    };
+        email: email.trim().toLowerCase(),
+      };
 
-    try {
-      localStorage.setItem('fin21_session', JSON.stringify(sessionActor));
+      try {
+        localStorage.setItem('fin21_session', JSON.stringify(sessionActor));
+      } catch (err) {
+        console.error('Session persistence failed:', err);
+      }
+
+      setIsVerifying(false);
+      onSuccess(sessionActor);
     } catch (err) {
-      console.error('Session persistence failed:', err);
+      console.error('Login error:', err);
+      setIsVerifying(false);
+      triggerError('SERVER UNREACHABLE — Backend is not running.');
     }
-
-    setIsVerifying(false);
-    onSuccess(sessionActor);
   };
 
   const handleSelectPreset = (presetEmail: string, presetPass: string) => {
@@ -174,7 +186,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSuccess }) => {
               </div>
             </div>
 
-            {/* Space 32px before button */}
+            {/* Submit button */}
             <div className="pt-2">
               <button
                 type="submit"
@@ -201,7 +213,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSuccess }) => {
               </button>
             </div>
 
-            {/* Error state (Space 16px below button) */}
+            {/* Error state */}
             {errorMsg && (
               <div className="border border-[#C8352B] bg-[#C8352B]/5 p-3 flex items-center space-x-3 text-left">
                 <AlertTriangle className="w-5 h-5 text-[#C8352B] stroke-[1.5] shrink-0" />
@@ -212,10 +224,10 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSuccess }) => {
             )}
           </form>
 
-          {/* Space 24px and Divider line (1px ink) */}
+          {/* Divider */}
           <div className="border-t border-[#0F0F0F] mt-8 mb-6" />
 
-          {/* Below divider: DEMO CREDENTIALS */}
+          {/* DEMO CREDENTIALS */}
           <div>
             <div className="small-caps text-[11px] tracking-[0.25em] text-[#8A8378] font-bold mb-3">
               DEMO CREDENTIALS
@@ -230,10 +242,10 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSuccess }) => {
                   title="Click to auto-fill credentials"
                 >
                   <div className="min-w-0 flex-1 truncate text-[#0F0F0F] font-bold group-hover:text-[#C8352B] transition-colors">
-  <span>{cred.email}</span>
-  <span className="mx-1">/</span>
-  <span>{cred.password}</span>
-</div>
+                    <span>{cred.email}</span>
+                    <span className="mx-1">/</span>
+                    <span>{cred.password}</span>
+                  </div>
                   <span className="small-caps text-[9px] text-[#8A8378] group-hover:text-[#0F0F0F] font-bold shrink-0">
                     → {cred.role.toUpperCase()}
                   </span>

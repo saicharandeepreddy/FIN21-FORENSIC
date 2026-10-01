@@ -1,23 +1,81 @@
-from fastapi import Header, HTTPException, Depends
+import os
+from datetime import datetime, timedelta
 from typing import Optional
+from fastapi import Depends, HTTPException
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from jose import JWTError, jwt
+from passlib.context import CryptContext
 
-API_KEYS = {
-    "sk_employee_ravi":   {"role": "employee", "actor_id": "EMP-0060", "name": "Ravi Yadav"},
-    "sk_manager_karthik": {"role": "manager",  "actor_id": "EMP-0054", "name": "Karthik Jain"},
-    "sk_finance_arjun":   {"role": "finance",  "actor_id": "EMP-0053", "name": "Arjun Prasad"},
-    "sk_admin_chaitanya": {"role": "admin",    "actor_id": "EMP-0052", "name": "Chaitanya Raju"},
+SECRET_KEY = os.getenv("JWT_SECRET", "fin21-dev-secret-change-in-prod")
+ALGORITHM = "HS256"
+ACCESS_TOKEN_EXPIRE_HOURS = 8
+
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+security = HTTPBearer()
+
+# Demo user store — in production this queries a users table in Postgres
+USERS = {
+    "ravi@tulasisupplies.example": {
+        "hashed_password": pwd_context.hash("demo1234"),
+        "role": "employee",
+        "actor_id": "EMP-0060",
+        "name": "Ravi Yadav",
+    },
+    "karthik@tulasisupplies.example": {
+        "hashed_password": pwd_context.hash("demo1234"),
+        "role": "manager",
+        "actor_id": "EMP-0054",
+        "name": "Karthik Jain",
+    },
+    "arjun@tulasisupplies.example": {
+        "hashed_password": pwd_context.hash("demo1234"),
+        "role": "finance",
+        "actor_id": "EMP-0053",
+        "name": "Arjun Prasad",
+    },
+    "chaitanya@tulasisupplies.example": {
+        "hashed_password": pwd_context.hash("demo1234"),
+        "role": "admin",
+        "actor_id": "EMP-0052",
+        "name": "Chaitanya Raju",
+    },
 }
 
 
+def authenticate_user(email: str, password: str) -> Optional[dict]:
+    user = USERS.get(email.lower().strip())
+    if not user:
+        return None
+    if not pwd_context.verify(password, user["hashed_password"]):
+        return None
+    return {
+        "email": email.lower().strip(),
+        "role": user["role"],
+        "actor_id": user["actor_id"],
+        "name": user["name"],
+    }
+
+
+def create_access_token(data: dict) -> str:
+    payload = data.copy()
+    payload["exp"] = datetime.utcnow() + timedelta(hours=ACCESS_TOKEN_EXPIRE_HOURS)
+    return jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
+
+
 def require_role(*allowed_roles: str):
-    def dependency(x_api_key: Optional[str] = Header(None)):
-        if not x_api_key or x_api_key not in API_KEYS:
-            raise HTTPException(status_code=401, detail="Invalid or missing API key")
-        user = API_KEYS[x_api_key]
-        if allowed_roles and user["role"] not in allowed_roles:
-            raise HTTPException(
-                status_code=403,
-                detail=f"Role '{user['role']}' not permitted. Required: {allowed_roles}",
-            )
-        return user
+    def dependency(creds: HTTPAuthorizationCredentials = Depends(security)):
+        try:
+            payload = jwt.decode(creds.credentials, SECRET_KEY, algorithms=[ALGORITHM])
+        except JWTError:
+            raise HTTPException(401, "Invalid or expired token")
+
+        role = payload.get("role")
+        if allowed_roles and role not in allowed_roles:
+            raise HTTPException(403, f"Role '{role}' not permitted. Required: {allowed_roles}")
+
+        return {
+            "actor_id": payload.get("sub"),
+            "role": role,
+            "name": payload.get("name"),
+        }
     return dependency

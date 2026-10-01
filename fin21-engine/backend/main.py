@@ -13,11 +13,12 @@ from sqlalchemy.orm import Session
 from database import engine, Base, get_db
 import models
 import schemas
-from auth import require_role
+from auth import require_role, authenticate_user, create_access_token
 from forensics import analyze_image_forensics, calculate_file_hash
 from ocr_engine import extract_receipt_data
 from policy_engine import evaluate_claim, map_category_to_nova
 from nova_client import verify_vendor, verify_employee
+from ela_dwt import analyze_forgery
 
 Base.metadata.create_all(bind=engine)
 
@@ -46,6 +47,23 @@ def on_startup():
     Base.metadata.create_all(bind=engine)
     os.makedirs(UPLOAD_DIR, exist_ok=True)
 
+@app.post("/api/v1/auth/login", response_model=schemas.LoginResponse, tags=["Auth"])
+def login(payload: schemas.LoginRequest):
+    user = authenticate_user(payload.email, payload.password)
+    if not user:
+        raise HTTPException(status_code=401, detail="Invalid credentials")
+    token = create_access_token({
+        "sub": user["actor_id"],
+        "role": user["role"],
+        "name": user["name"],
+    })
+    return {
+        "access_token": token,
+        "token_type": "bearer",
+        "role": user["role"],
+        "actor_id": user["actor_id"],
+        "name": user["name"],
+    }
 
 @app.get("/health", tags=["Health"])
 def health_check():
@@ -80,6 +98,72 @@ async def upload_claim(
 
     file_hash = calculate_file_hash(saved_filepath)
     forensics_flags = analyze_image_forensics(saved_filepath)
+    forensics_flags.extend(analyze_forgery(saved_filepath))
+
+    ocr_extracted = extract_receipt_data(saved_filepath, file.filename)
+
+    final_vendor = vendor or ocr_extracted.get("vendor") or "Unknown Vendor"
+    final_amount = float(amount) if amount is not None else float(ocr_extracted.get("amount") or 0.0)
+    final_date = expense_date or ocr_extracted.get("date") or datetime.date.today().isoformat()
+    raw_cat = category or ocr_extracted.get("category") or "other"
+    final_category = map_category_to_nova(raw_cat)
+
+    ocr_data = {
+        "employee_id": employee_id.strip(),
+        "vendor": final_vendor.strip(),
+        "amount": final_amount,
+        "date": final_date.strip(),
+        "category": final_category,
+        "gstin": ocr_extracted.get("gstin"),
+    }
+
+    result = await evaluate_claim(ocr_data, forensics_flags, db)
+
+    initial_status = "AUTO_APPROVED" if result["status"] == "AUTO_APPROVED" else "SUBMITTED"
+
+    claim_number = f"CLM-{uuid.uuid4().hex[:8].upper()}"
+
+    db_claim = models.Claim(
+        claim_number=claim_number,
+        employee_id=ocr_data["employee_id"],
+        vendor=ocr_data["vendor"],
+        amount=ocr_data["amount"],
+        category=ocr_data["category"],
+        expense_date=ocr_data["date"],
+        receipt_filename=file.filename,
+        receipt_path=f"/uploads/{unique_filename}",
+        receipt_hash=file_hash,
+        status=initial_status,
+        violations=result["violations"],
+        forensics_flags=forensics_flags,
+        ocr_raw_text=ocr_extracted.get("raw_text", ""),
+    )
+    db.add(db_claim)
+    db.commit()
+    db.refresh(db_claim)
+
+    db.add(models.ClaimEvent(
+        claim_id=db_claim.id,
+        event_type="SUBMITTED",
+        actor_id=user["actor_id"],
+        actor_role=user["role"],
+        old_status=None,
+        new_status=initial_status,
+        notes=f"Uploaded by {user['name']}",
+    ))
+    db.commit()
+    db.refresh(db_claim)
+    return db_claim
+    file_ext = os.path.splitext(file.filename)[1] or ".jpg"
+    unique_filename = f"{uuid.uuid4().hex}{file_ext}"
+    saved_filepath = os.path.join(UPLOAD_DIR, unique_filename)
+
+    contents = await file.read()
+    with open(saved_filepath, "wb") as f:
+        f.write(contents)
+
+    file_hash = calculate_file_hash(saved_filepath)
+    forensics_flags.extend(analyze_forgery(saved_filepath))
 
     ocr_extracted = extract_receipt_data(saved_filepath, file.filename)
 

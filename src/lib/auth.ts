@@ -1,66 +1,61 @@
 import { Actor } from './types';
-import { ROLE_KEYS } from './api';
-
-export const ACTORS: Actor[] = [
-  {
-    apiKey: ROLE_KEYS.employee,
-    role: 'employee',
-    actorId: 'EMP-0060',
-    name: 'Ravi Yadav',
-    title: 'Senior Software Engineer',
-    avatarInitials: 'RY',
-  },
-  {
-    apiKey: ROLE_KEYS.manager,
-    role: 'manager',
-    actorId: 'EMP-0054',
-    name: 'Karthik Jain',
-    title: 'Engineering Director',
-    avatarInitials: 'KJ',
-  },
-  {
-    apiKey: ROLE_KEYS.finance,
-    role: 'finance',
-    actorId: 'EMP-0053',
-    name: 'Arjun Prasad',
-    title: 'Head of Financial Compliance',
-    avatarInitials: 'AP',
-  },
-  {
-    apiKey: ROLE_KEYS.admin,
-    role: 'admin',
-    actorId: 'EMP-0052',
-    name: 'Chaitanya Raju',
-    title: 'Chief Operating Officer',
-    avatarInitials: 'CR',
-  },
-];
 
 const STORAGE_KEY = 'fin21_session';
+const LEGACY_KEY = 'fin21_auth_user';
 
+/**
+ * Retrieve the current session from localStorage.
+ * Returns null if no session exists or if JSON parsing fails.
+ */
 export function getStoredUser(): Actor | null {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY) || localStorage.getItem('fin21_auth_user');
+    const raw = localStorage.getItem(STORAGE_KEY) || localStorage.getItem(LEGACY_KEY);
     if (!raw) return null;
-    return JSON.parse(raw);
-  } catch {
+    return JSON.parse(raw) as Actor;
+  } catch (err) {
+    console.error('Failed to parse stored session:', err);
     return null;
   }
 }
 
+/**
+ * Persist the session (which now contains the JWT in the apiKey field).
+ */
 export function setStoredUser(actor: Actor): void {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(actor));
   } catch (err) {
-    console.error('Failed to store auth user', err);
+    console.error('Failed to store session:', err);
   }
 }
 
+/**
+ * Clear the session — used on sign out and on 401.
+ */
 export function clearStoredUser(): void {
   try {
     localStorage.removeItem(STORAGE_KEY);
-    localStorage.removeItem('fin21_auth_user');
+    localStorage.removeItem(LEGACY_KEY);
   } catch (err) {
-    console.error('Failed to clear auth user', err);
+    console.error('Failed to clear session:', err);
   }
+}
+
+/**
+ * Extract the JWT from the current session.
+ * Returns null if not logged in.
+ */
+export function getToken(): string | null {
+  const user = getStoredUser();
+  return user?.apiKey ?? null;
+}
+
+/**
+ * Check if the current session has a valid-looking JWT.
+ * A JWT has three dot-separated base64url segments.
+ */
+export function isAuthenticated(): boolean {
+  const token = getToken();
+  if (!token) return false;
+  return token.split('.').length === 3;
 }

@@ -7,3 +7,6 @@ pillow
 piexif
 httpx
 python-dotenv
+python-jose[cryptography]
+passlib[bcrypt]
+pywavelets

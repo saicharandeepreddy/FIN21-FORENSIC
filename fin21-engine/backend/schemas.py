@@ -101,3 +101,14 @@ class DuplicateCheckResult(BaseModel):
     is_duplicate: bool
     matching_claim: Optional[dict] = None
     error: Optional[str] = None
+class LoginRequest(BaseModel):
+    email: str
+    password: str
+
+
+class LoginResponse(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+    role: str
+    actor_id: str
+    name: str

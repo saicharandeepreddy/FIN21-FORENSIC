@@ -39,11 +39,11 @@ export interface ClaimEvent {
   created_at: string;
 }
 
-async function req<T>(path: string, apiKey: string, init: RequestInit = {}): Promise<T> {
+async function req<T>(path: string, token: string, init: RequestInit = {}): Promise<T> {
   const res = await fetch(`${API}${path}`, {
     ...init,
     headers: {
-      "X-API-Key": apiKey,
+      "Authorization": `Bearer ${token}`,
       ...(init.headers || {}),
     },
   });
@@ -92,37 +92,40 @@ export const reimburse = (k: string, id: number, body: object, _meta?: any) =>
     body: JSON.stringify(body),
   });
 
-export const raiseAppeal = async (claimIdOrKey: any, notesOrId: any, maybeNotesOrMeta?: any) => {
-  let key: string;
-  let id: number;
-  let notes: string;
-
-  if (typeof claimIdOrKey === 'string' && typeof notesOrId === 'number') {
-    key = claimIdOrKey;
-    id = notesOrId;
-    notes = typeof maybeNotesOrMeta === 'string' ? maybeNotesOrMeta : (maybeNotesOrMeta?.notes || '');
-  } else {
-    id = Number(claimIdOrKey);
-    notes = String(notesOrId);
-    key = ROLE_KEYS.employee;
-  }
-
-  try {
-    const raw = localStorage.getItem('fin21_appeals');
-    const map = raw ? JSON.parse(raw) : {};
-    map[id] = notes;
-    localStorage.setItem('fin21_appeals', JSON.stringify(map));
-  } catch {}
-
-  try {
-    return await req<Claim>(`/api/v1/claims/${id}/appeal`, key, {
+  export const raiseAppeal = async (claimIdOrKey: any, notesOrId: any, maybeNotesOrMeta?: any) => {
+    let token: string;
+    let id: number;
+    let notes: string;
+  
+    if (typeof claimIdOrKey === 'string' && typeof notesOrId === 'number') {
+      token = claimIdOrKey;
+      id = notesOrId;
+      notes = typeof maybeNotesOrMeta === 'string' ? maybeNotesOrMeta : (maybeNotesOrMeta?.notes || '');
+    } else {
+      // Fallback: get the JWT from localStorage
+      id = Number(claimIdOrKey);
+      notes = String(notesOrId);
+      try {
+        const session = JSON.parse(localStorage.getItem('fin21_session') || '{}');
+        token = session.apiKey || '';
+      } catch {
+        token = '';
+      }
+    }
+  
+    // Persist appeal locally so the Appeals view can render it
+    try {
+      const raw = localStorage.getItem('fin21_appeals');
+      const map = raw ? JSON.parse(raw) : {};
+      map[id] = notes;
+      localStorage.setItem('fin21_appeals', JSON.stringify(map));
+    } catch {}
+  
+    return await req<Claim>(`/api/v1/claims/${id}/appeal`, token, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ notes }),
     });
-  } catch {
-    return await fetchClaim(key, id);
-  }
-};
+  };
 
 export const receiptUrl = (path: string | null) => (path ? `${API}${path}` : "");
