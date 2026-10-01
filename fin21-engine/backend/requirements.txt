@@ -10,3 +10,4 @@ python-dotenv
 python-jose[cryptography]
 passlib[bcrypt]
 pywavelets
+bcrypt==4.0.1
